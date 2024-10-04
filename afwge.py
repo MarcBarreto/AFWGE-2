@@ -222,7 +222,7 @@ class AFWGE:
 
         :return: A list of tuples, where each tuple contains the original instance and its corresponding counterfactual.
         """
-        contrafactuals = []
+        counterfactuals = []
 
         for idx in range(self.dataset.shape[0]):
             x = self.dataset.iloc[idx].values[:-1]
@@ -258,6 +258,6 @@ class AFWGE:
 
             length = int(self.q * len(idx_sorted))
             for i in range(length):
-                contrafactuals.append((x, population[idx_sorted[i]]))
+                counterfactuals.append((x, population[idx_sorted[i]]))
 
-        return contrafactuals
+        return counterfactuals

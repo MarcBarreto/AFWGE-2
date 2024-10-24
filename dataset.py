@@ -49,3 +49,41 @@ def iris_preprocess():
 
     return scaler, X, y, iris_df, train_loader, test_loader
 
+def pima_preprocess(path):
+    """
+    Preprocesses the Pima dataset by splitting the data into features and target, scaling the features, and 
+    converting the data into PyTorch tensors. Additionally, it creates train and test data loaders for model training.
+    
+    :param path: Path of Pima Indians Diabetes Dataset.
+    :return: A tuple containing:
+        - scaler: The fitted StandardScaler used to scale the features.
+        - X: The scaled feature matrix as a NumPy array.
+        - y: The target labels as a NumPy array.
+        - iris_df: A DataFrame representation of the Iris dataset.
+        - train_loader: DataLoader object for the training set.
+        - test_loader: DataLoader object for the testing set.
+    """
+    pima_df = pd.read_csv('/kaggle/input/pima-indians-diabetes-database/diabetes.csv')
+
+    X_pima = pima_df.drop('Outcome', axis=1).values
+    y_pima = pima_df['Outcome'].values
+
+    scaler = StandardScaler()
+    X_pima = scaler.fit_transform(X_pima)
+
+    X_tensor_pima = torch.tensor(X_pima, dtype=torch.float32)
+    y_tensor_pima = torch.tensor(y_pima, dtype=torch.long)
+
+    pima_dataset = TensorDataset(X_tensor_pima, y_tensor_pima)
+
+    train_size = int(0.8 * len(pima_dataset))
+    test_size = len(pima_dataset) - train_size
+    train_dataset, test_dataset = torch.utils.data.random_split(pima_dataset, [train_size, test_size])
+
+    train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=16, shuffle=False)
+
+    pima_df['target'] = pima_df['Outcome']
+    pima_df.drop(['Outcome'], axis = 1, inplace = True)
+
+    return scaler, X_pima, y_pima, pima_df, train_loader, test_loader

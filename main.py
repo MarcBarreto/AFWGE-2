@@ -1,16 +1,21 @@
+import sys
 import mlp
 from afwge import AFWGE
 from dataset import iris_preprocess, pima_preprocess
 from utils import export_counterfactuals_custom_to_csv
 
 def main():
-    aux = input()
+    if len(sys.argv) > 1:
+        aux = sys.argv[1]
+    else:
+        aux = input("Type: iris to Iris dataset or pima to Pima Diabates Dataset") 
 
     if aux == 'iris':
         scaler, X, y, dataset, train_loader, test_loader = iris_preprocess()
         partial_constraints = {}
     elif aux == 'pima':
-        scaler, X, y, dataset, train_loader, test_loader = pima_preprocess()
+        path = input('Type: Path for Pima Diabete Dataset \n')
+        scaler, X, y, dataset, train_loader, test_loader = pima_preprocess(path)
         partial_constraints = {'Age': 'up'}
     else:
         print('Error: Choose iris or pima datasets')

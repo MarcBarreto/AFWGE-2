@@ -63,7 +63,7 @@ def pima_preprocess(path):
         - train_loader: DataLoader object for the training set.
         - test_loader: DataLoader object for the testing set.
     """
-    pima_df = pd.read_csv('/kaggle/input/pima-indians-diabetes-database/diabetes.csv')
+    pima_df = pd.read_csv(path)
 
     X_pima = pima_df.drop('Outcome', axis=1).values
     y_pima = pima_df['Outcome'].values

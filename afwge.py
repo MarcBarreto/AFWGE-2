@@ -5,11 +5,12 @@ import pandas as pd
 from mlp import inference
 
 class AFWGE:
-    def __init__(self, model, scaler, dataset, constraints=[None], select=2, k=100, generations=10, q=0.7, pc=0.7, pm=0.2):
+    def __init__(self, model, scaler, dataset, constraints=[None], partial_constraints = {}, select=2, k=100, generations=10, q=0.7, pc=0.7, pm=0.2):
         self.model = model
         self.scaler = scaler
         self.dataset = dataset
         self.constraints = constraints
+        self.partial_constraints = partial_constraints
         self.select = select
         self.k = k
         self.generations = generations
@@ -36,10 +37,24 @@ class AFWGE:
         for idx, column in enumerate(columns):
             if pd.api.types.is_numeric_dtype(self.dataset[column]):
                 if column not in self.constraints:
-                    if min_features.iloc[idx] == int(min_features.iloc[idx]) and max_features.iloc[idx] == int(max_features.iloc[idx]):
-                        new_population.append(np.random.randint(int(min_features.iloc[idx]), int(max_features.iloc[idx]) + 1, length))
+                    if column in self.partial_constraints.keys():
+                        constraint = self.partial_constraints[column]
+                        current_value = self.dataset.iloc[individual_idx][column]
+                        if constraint == 'up':
+                            if min_features.iloc[idx] == int(min_features.iloc[idx]) and max_features.iloc[idx] == int(max_features.iloc[idx]):
+                                new_population.append(np.random.randint(int(current_value), int(max_features.iloc[idx]) + 1, length))
+                            else:
+                                new_population.append(np.random.uniform(current_value, max_features.iloc[idx], length))
+                        elif constraint == 'down':
+                            if min_features.iloc[idx] == int(min_features.iloc[idx]) and max_features.iloc[idx] == int(max_features.iloc[idx]):
+                                new_population.append(np.random.randint(int(min_features.iloc[idx]), int(current_value), length))
+                            else:
+                                new_population.append(np.random.uniform(min_features.iloc[idx], current_value, length))
                     else:
-                        new_population.append(np.random.uniform(min_features.iloc[idx], max_features.iloc[idx], length))
+                        if min_features.iloc[idx] == int(min_features.iloc[idx]) and max_features.iloc[idx] == int(max_features.iloc[idx]):
+                            new_population.append(np.random.randint(int(min_features.iloc[idx]), int(max_features.iloc[idx]) + 1, length))
+                        else:
+                            new_population.append(np.random.uniform(min_features.iloc[idx], max_features.iloc[idx], length))
                 else:
                     new_population.append([self.dataset.iloc[individual_idx].iloc[idx]] * length)
             else:
@@ -182,6 +197,14 @@ class AFWGE:
                         else:
                             random_idx = np.random.randint(num_individuals)
                             offsprings[i][point] = population[random_idx][point]
+                    if self.dataset.columns[point] in self.partial_constraints.keys():
+                        constraint = self.partial_constraints[self.dataset.columns[point]]
+                        original_value = population[parents_idx[0]][point]
+                        
+                        if constraint == 'up' and offsprings[i][point] < original_value:
+                            offsprings[i][point] = original_value
+                        elif constraint == 'down' and offsprings[i][point] > original_value:
+                            offsprings[i][point] = original_value
 
                 population = self.check_eval_offspring(offsprings[i], parents_idx, population, x, eval_population)
 

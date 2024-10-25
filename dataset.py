@@ -1,7 +1,7 @@
 import torch
 import pandas as pd
 from sklearn import datasets
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import MinMaxScaler
 from torch.utils.data import DataLoader, TensorDataset
 
 def iris_preprocess():
@@ -32,7 +32,7 @@ def iris_preprocess():
     X = iris_df.drop('target', axis=1).values
     y = iris_df['target'].values
 
-    scaler = StandardScaler()
+    scaler = MinMaxScaler()
     X = scaler.fit_transform(X)
 
     X_tensor = torch.tensor(X, dtype=torch.float32)
@@ -47,7 +47,10 @@ def iris_preprocess():
     train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=16, shuffle=False)
 
-    return scaler, X, y, iris_df, train_loader, test_loader
+    new_df = pd.DataFrame(X, columns = iris_df.columns[:-1])
+    new_df['target'] = iris_df['target']
+
+    return scaler, X, y, new_df, train_loader, test_loader
 
 def pima_preprocess(path):
     """
@@ -68,7 +71,7 @@ def pima_preprocess(path):
     X_pima = pima_df.drop('Outcome', axis=1).values
     y_pima = pima_df['Outcome'].values
 
-    scaler = StandardScaler()
+    scaler = MinMaxScaler()
     X_pima = scaler.fit_transform(X_pima)
 
     X_tensor_pima = torch.tensor(X_pima, dtype=torch.float32)
@@ -86,4 +89,7 @@ def pima_preprocess(path):
     pima_df['target'] = pima_df['Outcome']
     pima_df.drop(['Outcome'], axis = 1, inplace = True)
 
-    return scaler, X_pima, y_pima, pima_df, train_loader, test_loader
+    new_df = pd.DataFrame(X_pima, columns = pima_df.columns[:-1])
+    new_df['target'] = pima_df['target']
+
+    return scaler, X_pima, y_pima, new_df, train_loader, test_loader

@@ -25,7 +25,7 @@ def main():
 
     print('---------------- Creating Counterfactuals ----------------')
 
-    afwge = AFWGE(model, scaler, dataset, partial_constraints, select = 20, k = 1000)
+    afwge = AFWGE(model, scaler, dataset, partial_constraints, select = 400, k = 1000)
     counterfactuals = afwge()
 
     export_counterfactuals_custom_to_csv(counterfactuals, dataset)

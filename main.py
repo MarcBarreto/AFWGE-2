@@ -34,8 +34,9 @@ def main():
     utils.export_counterfactuals_custom_to_csv(counterfactuals, dataset)
     print('---------------- Counterfactuals Created ----------------\n')
     print('---------------- Calculating Metrics ----------------\n')
-    distance, distances = utils.calculate_distance(counterfactuals)
+    distance, distances, changed_features = utils.calculate_metrics(counterfactuals)
     print(f'Distances Average: {distance:.4f}\n')
+    print(f'Number of features Changed: {changed_features}\n')
     utils.box_plot(distances, f'Distance of Features on the {title}')
     print('---------------- Finished ----------------')
 

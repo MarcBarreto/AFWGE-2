@@ -38,14 +38,32 @@ def export_counterfactuals_custom_to_csv(counterfactuals, iris_df, filename='cou
     
     print(f'{filename} saved!')
 
-def calculate_distance(counterfactuals):
+def calc_changed_features(original, counterfactual):
     """
-    Calculate the average weighted distance for a list of counterfactuals.
+    Calculate the number of features that have changed between the original and counterfactual values.
     
-    This function computes the total and average weighted distance between
-    the original values and the modified counterfactual values for a given
-    set of counterfactuals. Each counterfactual contains original values
-    and modified values with their corresponding feature weights.
+    This function counts the number of features that differ between the original
+    feature values and the counterfactual feature values.
+    
+    :param original: A list or array of original feature values.
+    :param counterfactual: A list or array of counterfactual feature values.
+    :return: An integer representing the number of features that have changed.
+    """
+    counter = 0
+    for idx in range(len(original)):
+        if original[idx] != counterfactual[idx]:
+            counter += 1 
+    
+    return counter
+
+def calculate_metrics(counterfactuals):
+    """
+    Calculate various metrics for a list of counterfactuals.
+    
+    This function computes the total and average weighted distance, as well as the
+    number of changed features between the original values and the counterfactual
+    values for a given set of counterfactuals. Each counterfactual contains original
+    values and modified values with their corresponding feature weights.
     
     :param counterfactuals: A list of tuples, where each tuple contains:
         - original: A list or array of original feature values.
@@ -53,19 +71,24 @@ def calculate_distance(counterfactuals):
     :return: A tuple containing:
         - average_weighted_distance: The average weighted distance across all counterfactuals.
         - distances: A list of individual weighted distances for each counterfactual.
+        - changed_features: The total number of changed features across all counterfactuals.
     """
     total_weighted_distance = 0.0
     distances = []
     num_counterfactuals = len(counterfactuals)
+    
+    changed_features = 0
     
     for original, modified_with_weights in counterfactuals:
         distance = AFWGE.matching_distance(original, modified_with_weights)
         total_weighted_distance += distance
         distances.append(distance)
         
+        changed_features += calc_changed_features(original, modified_with_weights[:len(original)])
+    
     average_weighted_distance = total_weighted_distance / num_counterfactuals
     
-    return average_weighted_distance, distances
+    return average_weighted_distance, distances, changed_features
 
 def box_plot(x, title):
     """

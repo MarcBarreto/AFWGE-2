@@ -78,7 +78,7 @@ class AFWGE:
 
         return new_population
 
-    def matching_distance(self, x, c):
+    def matching_distance(x, c):
         """
         Calculates the weighted distance between an original instance 'x' and a counterfactual instance 'c'.
         Numerical and categorical features are treated differently, using feature-specific weights.
@@ -124,7 +124,7 @@ class AFWGE:
         """
         for idx in parents_idx:
             for offspring in offsprings:
-                offspring_distance = self.matching_distance(x, offspring)
+                offspring_distance = AFWGE.matching_distance(x, offspring)
                 if offspring_distance < eval_population[idx]:
                     population[idx] = offspring
                     eval_population[idx] = offspring_distance
@@ -142,7 +142,6 @@ class AFWGE:
         :param eval_population: Evaluation scores of the current population.
         :return: Updated population and the list of generated offspring.
         """
-        offsprings = []
         parents = [population[idx] for idx in parents_idx]
         num_features = len(x)
         num_individuals = len(parents)
@@ -248,14 +247,14 @@ class AFWGE:
 
             for i in range(self.generations):
                 population = self.generate_population(self.k - len(population), idx, population)
-                eval_population = np.array([self.matching_distance(x, individual) for individual in population])
+                eval_population = np.array([AFWGE.matching_distance(x, individual) for individual in population])
 
                 parents_idx = self.get_parents_idx(eval_population)
                 population = self.crossover(population, x, parents_idx, eval_population)
                 population = self.mutate(population, x, parents_idx, eval_population)
                 population = self.filter_population(population, self.dataset.iloc[idx])
 
-                eval_population = np.array([self.matching_distance(x, individual) for individual in population])
+                eval_population = np.array([AFWGE.matching_distance(x, individual) for individual in population])
                 idx_sorted = sorted(range(len(eval_population)), key=lambda i: eval_population[i])
 
                 if eval_population[idx_sorted[0]] < best_fitness:

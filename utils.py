@@ -1,5 +1,7 @@
 import csv
 import numpy as np
+import matplotlib.pyplot as plt
+from afwge import AFWGE
 
 def export_counterfactuals_custom_to_csv(counterfactuals, iris_df, filename='counterfactuals.csv'):
     """
@@ -35,3 +37,64 @@ def export_counterfactuals_custom_to_csv(counterfactuals, iris_df, filename='cou
             writer.writerow(row)
     
     print(f'{filename} saved!')
+
+def calculate_distance(counterfactuals):
+    """
+    Calculate the average weighted distance for a list of counterfactuals.
+    
+    This function computes the total and average weighted distance between
+    the original values and the modified counterfactual values for a given
+    set of counterfactuals. Each counterfactual contains original values
+    and modified values with their corresponding feature weights.
+    
+    :param counterfactuals: A list of tuples, where each tuple contains:
+        - original: A list or array of original feature values.
+        - modified_with_weights: A list or array of modified feature values and their weights.
+    :return: A tuple containing:
+        - average_weighted_distance: The average weighted distance across all counterfactuals.
+        - distances: A list of individual weighted distances for each counterfactual.
+    """
+    total_weighted_distance = 0.0
+    distances = []
+    num_counterfactuals = len(counterfactuals)
+    
+    for original, modified_with_weights in counterfactuals:
+        distance = AFWGE.matching_distance(original, modified_with_weights)
+        total_weighted_distance += distance
+        distances.append(distance)
+        
+    average_weighted_distance = total_weighted_distance / num_counterfactuals
+    
+    return average_weighted_distance, distances
+
+def box_plot(x, title):
+    """
+    Create and display a box plot for a given set of values.
+    
+    This function generates a box plot for the provided data, customizing
+    the appearance of the plot, including colors, outliers, and grid lines.
+    
+    :param x: A list or array of features distances to be plotted.
+    :param title: A string representing the title of the plot.
+    """
+    plt.figure(figsize=(8, 5))
+
+    box = plt.boxplot(x, patch_artist=True, showfliers=True, notch=True)
+
+    box['boxes'][0].set_facecolor('blue')
+    box['boxes'][0].set_edgecolor('black')
+    box['boxes'][0].set_linewidth(1)
+
+    for flier in box['fliers']:
+        flier.set(marker='o', color='red', alpha=0.5)
+
+    plt.title(title, fontsize=16)
+    plt.ylabel('Distance', fontsize=14)
+
+    plt.grid(axis='y', linestyle='--', alpha=0.7)
+
+    plt.xticks([]) 
+    plt.yticks(fontsize=12)
+
+    plt.tight_layout()
+    plt.show()

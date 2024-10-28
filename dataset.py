@@ -13,21 +13,14 @@ def iris_preprocess():
         - scaler: The fitted StandardScaler used to scale the features.
         - X: The scaled feature matrix as a NumPy array.
         - y: The target labels as a NumPy array.
-        - iris_df: A DataFrame representation of the Iris dataset.
+        - new_df: A DataFrame representation of the Iris dataset.
         - train_loader: DataLoader object for the training set.
         - test_loader: DataLoader object for the testing set.
     """
     iris = datasets.load_iris()
-    
-    sepal_length, sepal_width, petal_length, petal_width = zip(*iris['data'])
 
-    iris_dict = {'sepal length (cm)': sepal_length,
-            'sepal width (cm)': sepal_width,
-            'petal length (cm)': petal_length,
-            'petal width (cm)': petal_width,
-            'target': iris['target'] }
-
-    iris_df = pd.DataFrame(iris_dict)
+    iris_df = pd.DataFrame(data = iris['data'], columns = iris['feature_names'])
+    iris_df['target'] = iris['target']
 
     X = iris_df.drop('target', axis=1).values
     y = iris_df['target'].values
@@ -93,3 +86,44 @@ def pima_preprocess(path):
     new_df['target'] = pima_df['target']
 
     return scaler, X_pima, y_pima, new_df, train_loader, test_loader
+
+def breast_preprocess():
+    """
+    Preprocesses the Breast Cancer dataset by splitting the data into features and target, scaling the features, and 
+    converting the data into PyTorch tensors. Additionally, it creates train and test data loaders for model training.
+
+    :return: A tuple containing:
+        - scaler: The fitted StandardScaler used to scale the features.
+        - X: The scaled feature matrix as a NumPy array.
+        - y: The target labels as a NumPy array.
+        - new_breast_df: A DataFrame representation of the Breast Cancer dataset.
+        - train_loader: DataLoader object for the training set.
+        - test_loader: DataLoader object for the testing set.
+    """
+    breast_sk = datasets.load_breast_cancer()
+
+    breast_df = pd.DataFrame(data = breast_sk['data'], columns = breast_sk['feature_names'])
+    breast_df['target'] = breast_sk['target']
+
+    X = breast_df.drop('target', axis=1).values
+    y = breast_df['target'].values
+
+    scaler = MinMaxScaler()
+    X = scaler.fit_transform(X)
+
+    X_tensor = torch.tensor(X, dtype=torch.float32)
+    y_tensor = torch.tensor(y, dtype=torch.long)
+
+    dataset = TensorDataset(X_tensor, y_tensor)
+
+    train_size = int(0.8 * len(dataset))
+    test_size = len(dataset) - train_size
+    train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, test_size])
+
+    train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=16, shuffle=False)
+
+    new_breast_df = pd.DataFrame(X, columns = breast_df.columns[:-1])
+    new_breast_df['target'] = breast_df['target']
+
+    return scaler, X, y, new_breast_df, train_loader, test_loader

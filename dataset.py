@@ -142,7 +142,7 @@ def adult_preprocess(path):
         - adult_df: A DataFrame representation of the preprocessed Adult dataset, including all features.
         - train_loader: DataLoader object for the training set.
         - test_loader: DataLoader object for the testing set.
-        - numeric_cols: A list of the names of the numerical columns that were scaled.
+        - encoded_columns: A list of the names of the columns of the encoded dataset.
     """
     adult_df = pd.read_csv(path)
 
@@ -175,4 +175,4 @@ def adult_preprocess(path):
     train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=16, shuffle=False)
 
-    return scaler, X_adult, y_adult, adult_df, train_loader, test_loader, numeric_cols
+    return scaler, X_adult, y_adult, adult_df, train_loader, test_loader, encoded_adult.drop('target', axis = 1).columns

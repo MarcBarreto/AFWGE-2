@@ -5,10 +5,11 @@ import pandas as pd
 from mlp import inference
 
 class AFWGE:
-    def __init__(self, model, scaler, dataset, constraints=[None], partial_constraints = {}, select=2, k=100, generations=10, q=0.7, pc=0.7, pm=0.2):
+    def __init__(self, model, scaler, dataset, constraints=[None], partial_constraints = {}, select=2, k=100, generations=10, q=0.7, pc=0.7, pm=0.2, encoded = False, encoded_columns = []):
         self.model = model
         self.scaler = scaler
         self.dataset = dataset
+        self.columns = dataset.columns[:-1]
         self.constraints = constraints
         self.partial_constraints = partial_constraints
         self.select = select
@@ -17,6 +18,8 @@ class AFWGE:
         self.q = q
         self.pc = pc
         self.pm = pm
+        self.encoded = encoded
+        self.encoded_columns = encoded_columns
 
     def generate_population(self, length, individual_idx, population=[]):
         """
@@ -227,6 +230,39 @@ class AFWGE:
                 filtered_population.append(mutated_population[idx])
 
         return np.array(filtered_population)
+    
+    def filter_encoded_population(self, mutated_population, x):
+        """
+        Filter the mutated population to retain only those individuals that produce a different prediction from the original instance.
+
+        This method encodes the categorical features of the mutated population, uses a pre-trained model to make predictions,
+        and filters out individuals that do not change the predicted class compared to the original instance.
+
+        :param mutated_population: A NumPy array representing the mutated population. Each row corresponds to an individual.
+        :param x: A dictionary containing the original instance's features and target. The 'target' key holds the original class label.
+        :return: A NumPy array of the filtered population, containing only individuals with predictions different from the original class.
+        """
+        filtered_population = []
+        
+        df = pd.DataFrame(data = [np.zeros(len(self.encoded_columns))], columns = self.encoded_columns)
+        
+        encoded_population = pd.DataFrame(data = mutated_population[:, :len(self.columns)], columns = self.columns)
+        
+        encoded_population = pd.get_dummies(encoded_population).astype(float)
+        
+        df = pd.concat([df] * len(encoded_population), ignore_index=True)
+
+        df.update(encoded_population)
+        
+        data = df.values
+        
+        results = inference(self.model, torch.tensor(data, dtype = torch.float32))
+                        
+        for idx, result in enumerate(results):
+            if result != x['target']:
+                filtered_population.append(mutated_population[idx])
+        
+        return np.array(filtered_population)
 
     def __call__(self):
         """
@@ -252,7 +288,11 @@ class AFWGE:
                 parents_idx = self.get_parents_idx(eval_population)
                 population = self.crossover(population, x, parents_idx, eval_population)
                 population = self.mutate(population, x, parents_idx, eval_population)
-                population = self.filter_population(population, self.dataset.iloc[idx])
+                
+                if self.encoded:
+                    population = self.filter_encoded_population(population, self.dataset.iloc[idx], self.columns)
+                else:
+                    population = self.filter_population(population, self.dataset.iloc[idx])
 
                 eval_population = np.array([AFWGE.matching_distance(x, individual) for individual in population])
                 idx_sorted = sorted(range(len(eval_population)), key=lambda i: eval_population[i])

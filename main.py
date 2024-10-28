@@ -11,9 +11,11 @@ def main():
     else:
         aux = input("Type: iris to Iris dataset; pima to Pima Diabates Dataset; breast to Breast Cancer Dataset or adult to Adult Income Dataset") 
 
+    encoded = False
+    encoded_columns = []
     constraints = []
     partial_constraints = {}
-
+    
     if aux == 'iris':
         scaler, X, y, df, train_loader, test_loader = dataset.iris_preprocess()
         title = 'Iris Dataset'
@@ -27,7 +29,8 @@ def main():
         title = 'Breast Cancer Dataset'
     elif aux == 'adult':
         path = input('Type: Path for Pima Diabete Dataset \n')
-        scaler, X, y, df, train_loader, test_loader, numeric_cols = dataset.adult_preprocess(path)
+        scaler, X, y, df, train_loader, test_loader, encoded_columns = dataset.adult_preprocess(path)
+        encoded = True
         constraints = ['Race', 'Sex']
         partial_constraints = {'Age': 'up'}
     else:
@@ -38,7 +41,7 @@ def main():
 
     print('---------------- Creating Counterfactuals ----------------')
 
-    afwge = AFWGE(model, scaler, df, constraints, partial_constraints,select = 400, k = 1000)
+    afwge = AFWGE(model, scaler, df, constraints, partial_constraints,select = 400, k = 1000, encoded = encoded, encoded_columns = encoded_columns)
     counterfactuals = afwge()
 
     utils.export_counterfactuals_custom_to_csv(counterfactuals, df)

@@ -15,18 +15,21 @@ def main():
     partial_constraints = {}
 
     if aux == 'iris':
-        scaler, X, y, dataset, train_loader, test_loader = dataset.iris_preprocess()
+        scaler, X, y, df, train_loader, test_loader = dataset.iris_preprocess()
         title = 'Iris Dataset'
     elif aux == 'pima':
         path = input('Type: Path for Pima Diabete Dataset \n')
-        scaler, X, y, dataset, train_loader, test_loader = dataset.pima_preprocess(path)
+        scaler, X, y, df, train_loader, test_loader = dataset.pima_preprocess(path)
         partial_constraints = {'Age': 'up'}
         title = 'Pima Diabete Dataset'
     elif aux == 'breast':
-        scaler, X, y, dataset, train_loader, test_loader = dataset.breast_preprocess()
+        scaler, X, y, df, train_loader, test_loader = dataset.breast_preprocess()
         title = 'Breast Cancer Dataset'
     elif aux == 'adult':
-        pass
+        path = input('Type: Path for Pima Diabete Dataset \n')
+        scaler, X, y, df, train_loader, test_loader, numeric_cols = dataset.adult_preprocess(path)
+        constraints = ['Race', 'Sex']
+        partial_constraints = {'Age': 'up'}
     else:
         print('Error: Choose iris, pima, breast or adult datasets')
         return
@@ -35,10 +38,10 @@ def main():
 
     print('---------------- Creating Counterfactuals ----------------')
 
-    afwge = AFWGE(model, scaler, dataset, constraints, partial_constraints,select = 400, k = 1000)
+    afwge = AFWGE(model, scaler, df, constraints, partial_constraints,select = 400, k = 1000)
     counterfactuals = afwge()
 
-    utils.export_counterfactuals_custom_to_csv(counterfactuals, dataset)
+    utils.export_counterfactuals_custom_to_csv(counterfactuals, df)
     print('---------------- Counterfactuals Created ----------------\n')
     print('---------------- Calculating Metrics ----------------\n')
     distance, distances, changed_features = utils.calculate_metrics(counterfactuals)

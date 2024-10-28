@@ -127,3 +127,52 @@ def breast_preprocess():
     new_breast_df['target'] = breast_df['target']
 
     return scaler, X, y, new_breast_df, train_loader, test_loader
+
+def adult_preprocess(path):
+    """
+    Preprocesses the Adult Income dataset by performing several data cleaning and transformation steps, including
+    handling missing values, encoding categorical variables, scaling numerical features, and preparing the data for 
+    model training in PyTorch.
+
+    :param path: Path to the Adult Income dataset CSV file.
+    :return: A tuple containing:
+        - scaler: The fitted MinMaxScaler used to scale the numerical features.
+        - X_adult: The scaled feature matrix as a NumPy array.
+        - y_adult: The target labels as a NumPy array.
+        - adult_df: A DataFrame representation of the preprocessed Adult dataset, including all features.
+        - train_loader: DataLoader object for the training set.
+        - test_loader: DataLoader object for the testing set.
+        - numeric_cols: A list of the names of the numerical columns that were scaled.
+    """
+    adult_df = pd.read_csv(path)
+
+    adult_df.replace('?', '', inplace = True)
+    adult_df = adult_df.replace('', pd.NA).dropna()
+
+    adult_df['target'] = adult_df['income'].apply(lambda x: 0 if x == '<=50K' else 1)
+    adult_df = adult_df.drop('income', axis = 1)
+
+    numeric_cols = ['age', 'fnlwgt', 'educational-num', 'capital-gain', 'capital-loss', 'hours-per-week']
+
+    scaler = MinMaxScaler()
+    adult_df[numeric_cols] = scaler.fit_transform(adult_df[numeric_cols])
+
+    encoded_adult = pd.get_dummies(adult_df)
+    encoded_adult = encoded_adult.astype(float)
+
+    X_adult = encoded_adult.drop('target', axis = 1).values
+    y_adult = encoded_adult['target'].values
+
+    X_tensor = torch.tensor(X_adult, dtype=torch.float32)
+    y_tensor = torch.tensor(y_adult, dtype=torch.long)
+
+    dataset = TensorDataset(X_tensor, y_tensor)
+
+    train_size = int(0.8 * len(dataset))
+    test_size = len(dataset) - train_size
+    train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, test_size])
+
+    train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=16, shuffle=False)
+
+    return scaler, X_adult, y_adult, adult_df, train_loader, test_loader, numeric_cols

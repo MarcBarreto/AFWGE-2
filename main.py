@@ -28,7 +28,7 @@ def main():
         scaler, X, y, df, train_loader, test_loader = dataset.breast_preprocess()
         title = 'Breast Cancer Dataset'
     elif aux == 'adult':
-        path = input('Type: Path for Pima Diabete Dataset \n')
+        path = input('Type: Path for Adult Dataset \n')
         scaler, X, y, df, train_loader, test_loader, encoded_columns = dataset.adult_preprocess(path)
         encoded = True
         constraints = ['Race', 'Sex']
@@ -41,16 +41,17 @@ def main():
 
     print('---------------- Creating Counterfactuals ----------------')
 
-    afwge = AFWGE(model, scaler, df, constraints, partial_constraints,select = 400, k = 1000, encoded = encoded, encoded_columns = encoded_columns)
+    afwge = AFWGE(model, scaler, df, constraints, partial_constraints,select = 200, k = 1000, encoded = encoded, encoded_columns = encoded_columns)
     counterfactuals = afwge()
 
     utils.export_counterfactuals_custom_to_csv(counterfactuals, df)
     print('---------------- Counterfactuals Created ----------------\n')
     print('---------------- Calculating Metrics ----------------\n')
-    distance, distances, changed_features = utils.calculate_metrics(counterfactuals)
-    print(f'Distances Average: {distance:.4f}\n')
-    print(f'Number of features Changed: {changed_features}\n')
-    utils.box_plot(distances, f'Distance of Features on the {title}')
+    distance, _, avg_changed_features, changed_features = utils.calculate_metrics(counterfactuals, df)
+    
+    print(f'Distance: {distance:.4f}\n Changed Features: {avg_changed_features}')
+
+    utils.bar_plot(changed_features, f'Distribution of the number of feature changes of the {title}')
     print('---------------- Finished ----------------')
 
 if __name__ == '__main__':

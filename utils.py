@@ -1,7 +1,7 @@
 import csv
+import random
 import numpy as np
 import matplotlib.pyplot as plt
-from afwge import AFWGE
 
 def export_counterfactuals_custom_to_csv(counterfactuals, iris_df, filename='counterfactuals.csv'):
     """
@@ -33,12 +33,15 @@ def export_counterfactuals_custom_to_csv(counterfactuals, iris_df, filename='cou
         writer.writerow(headers)
         
         for i in range(len(counterfactuals)):
-            row =  list(counterfactuals[i][0]) + list(np.round(counterfactuals[i][1], 4))
+            if isinstance(counterfactuals[i][1], (int, float)):
+                row =  list(counterfactuals[i][0]) + list(np.round(counterfactuals[i][1], 4))
+            else:
+                row =  list(counterfactuals[i][0]) + list(counterfactuals[i][1])
             writer.writerow(row)
     
     print(f'{filename} saved!')
 
-def calc_changed_features(original, counterfactual):
+def calc_changed_features(original, counterfactual, changed_features):
     """
     Calculate the number of features that have changed between the original and counterfactual values.
     
@@ -49,46 +52,73 @@ def calc_changed_features(original, counterfactual):
     :param counterfactual: A list or array of counterfactual feature values.
     :return: An integer representing the number of features that have changed.
     """
-    counter = 0
-    for idx in range(len(original)):
+    for idx in range(len(changed_features)):
         if original[idx] != counterfactual[idx]:
-            counter += 1 
-    
-    return counter
+            changed_features[idx] += 1
+            
+    return changed_features
 
-def calculate_metrics(counterfactuals):
+def calculate_metrics(counterfactuals, dataset):
     """
-    Calculate various metrics for a list of counterfactuals.
+    Calculate metrics for a list of counterfactuals, including the average weighted distance,
+    individual distances, average feature changes per instance, and per-feature change count.
     
-    This function computes the total and average weighted distance, as well as the
-    number of changed features between the original values and the counterfactual
-    values for a given set of counterfactuals. Each counterfactual contains original
-    values and modified values with their corresponding feature weights.
+    This function computes various metrics to assess the effectiveness of counterfactuals.
+    It calculates:
+        1. The average weighted distance between the original and counterfactual instances.
+        2. A list of individual weighted distances for each counterfactual.
+        3. The average number of feature changes across all instances.
+        4. A dictionary with the change count per feature.
     
-    :param counterfactuals: A list of tuples, where each tuple contains:
-        - original: A list or array of original feature values.
-        - modified_with_weights: A list or array of modified feature values and their weights.
-    :return: A tuple containing:
-        - average_weighted_distance: The average weighted distance across all counterfactuals.
-        - distances: A list of individual weighted distances for each counterfactual.
-        - changed_features: The total number of changed features across all counterfactuals.
+    Parameters:
+    - counterfactuals: list of tuples, where each tuple has:
+        - original: list of original feature values for a data instance.
+        - modified_with_weights: list of counterfactual values and corresponding feature weights.
+    - dataset: DataFrame representing the dataset, used to determine the number of instances and features.
+    
+    Returns:
+    - avg_distance: float, average weighted distance for all counterfactuals.
+    - distances: list, each entry is the distance for a corresponding counterfactual.
+    - avg_changed_features: float, average feature changes per instance across the dataset.
+    - changed_features: dict, counts of changes per feature.
     """
-    total_weighted_distance = 0.0
+    total_distance = 0.0
     distances = []
-    num_counterfactuals = len(counterfactuals)
     
-    changed_features = 0
+    num_counterfactuals = len(counterfactuals)
+    num_features = dataset.shape[1] - 1
+    
+    changed_features = {f'F{idx + 1}': 0 for idx in range(num_features)}
+    
+    num_counterfactuals_input = 1
+    aux_original = None
+    aux_changed_features = np.zeros(num_features)
     
     for original, modified_with_weights in counterfactuals:
-        distance = AFWGE.matching_distance(original, modified_with_weights)
-        total_weighted_distance += distance
+        distance = matching_distance(original, modified_with_weights)
+        total_distance += distance
         distances.append(distance)
+            
+        aux_changed_features = calc_changed_features(original, modified_with_weights[:len(original)], aux_changed_features)
         
-        changed_features += calc_changed_features(original, modified_with_weights[:len(original)])
+        if aux_original is None or not np.array_equal(aux_original, original):
+            aux_original = original
+            for idx, key in enumerate(changed_features.keys()):
+                changed_features[key] += aux_changed_features[idx] / num_counterfactuals_input
+                num_counterfactuals_input = 1
+            aux_changed_features = np.zeros(num_features)
+        else:
+            num_counterfactuals_input += 1
+        
+    changed_features_total = 0
+    for key, values in changed_features.items():
+        changed_features[key] = int(values / dataset.shape[0])
+        changed_features_total += values
     
-    average_weighted_distance = total_weighted_distance / num_counterfactuals
+    avg_distance = total_distance / num_counterfactuals
+    avg_changed_features = changed_features_total / dataset.shape[0]
     
-    return average_weighted_distance, distances, changed_features
+    return avg_distance, distances, avg_changed_features, changed_features
 
 def box_plot(x, title):
     """
@@ -121,3 +151,82 @@ def box_plot(x, title):
 
     plt.tight_layout()
     plt.show()
+
+def bar_plot(data: dict, title: str):
+    """
+    Generate a bar plot from a dictionary of data, displaying the frequency of each key.
+    
+    This function takes a dictionary with keys representing categories and values representing 
+    their frequencies. It creates a bar plot using this data, with options to customize the title 
+    and display gridlines for clarity.
+
+    Parameters:
+    - data (dict): A dictionary where keys are the labels for each bar (x-axis), 
+      and values are the frequencies or counts (y-axis).
+    - title (str): The title of the plot.
+
+    Returns:
+    - None: The function directly displays the plot.
+    """
+    plt.bar(x=data.keys(), height=data.values(), fill=False)
+    
+    plt.title(title)
+    
+    plt.ylabel('Frequency')
+    
+    plt.grid(axis='y', linestyle='-', alpha=0.3)
+    
+    plt.tight_layout()
+    
+    plt.show()
+
+def generate_random_value(value, thresh, value2):
+    """
+    Generates a random value based on the provided input types and threshold values.
+    
+    This function takes two values, `value` and `thresh`, and generates a new value within
+    the range defined by `value` and `thresh`. If `value2` is equal to `thresh`, `value2`
+    is returned directly, preserving that value. Different behaviors are applied based on the 
+    data types of `value` and `thresh`.
+    
+    Parameters:
+    - value: The first value to consider in the range, can be int or float.
+    - thresh: The second value to consider in the range, used as a threshold. Can also be int or float.
+    - value2: A fallback value, used if `value2` equals `thresh`.
+    
+    Returns:
+    - A random integer within the inclusive range of [min(value, thresh), max(value, thresh)] if both are integers.
+    - A random float within the range [min(value, thresh), max(value, thresh)] if either is a float.
+    - `value2` if `value2` equals `thresh`, used as a fallback.
+    """
+    if isinstance(value, int) and isinstance(thresh, int):
+        return random.randint(min(value, thresh), max(value, thresh))
+    
+    if isinstance(value, float):
+        return random.uniform(min(value, thresh), max(value, thresh))
+    
+    if value2 == thresh:
+        return value2
+    
+    return value2
+
+def matching_distance(x, c):
+    """
+    Calculates the weighted distance between an original instance 'x' and a counterfactual instance 'c'.
+    Numerical and categorical features are treated differently, using feature-specific weights.
+
+    :param x: The original instance.
+    :param c: The counterfactual instance, including feature weights.
+    :return: The weighted distance between 'x' and 'c'.
+    """
+    distance = 0
+    num_columns = len(x)
+
+    for idx in range(len(x)):
+        if isinstance(x[idx], (np.integer, np.floating)):
+            distance += abs(x[idx] - c[idx]) * c[idx + num_columns]
+        else:
+            match = 0 if x[idx] == c[idx] else 1
+            distance += match * c[idx + num_columns]
+
+    return distance

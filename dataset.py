@@ -175,4 +175,6 @@ def adult_preprocess(path):
     train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=16, shuffle=False)
 
+    adult_df = pd.concat([adult_df.head(50), adult_df.tail(50)])
+
     return scaler, X_adult, y_adult, adult_df, train_loader, test_loader, encoded_adult.drop('target', axis = 1).columns
